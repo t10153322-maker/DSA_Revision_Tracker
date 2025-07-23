@@ -118,11 +118,6 @@ const ProblemHistoryModal: React.FC<ProblemHistoryModalProps> = ({ isOpen, onClo
                           {review.wasCorrect ? 
                             (review.difficulty === 'Easy' ? 'Solved Easily' : 'Solved with Difficulty') : 
                             'Couldn\'t Solve'
-                          } • 
-                              review.difficulty === 'Easy' ? 'text-green-600' : 'text-orange-600'
-                            }`}>
-                              {review.difficulty === 'Easy' ? 'Easy' : 'With Difficulty'}
-                            {review.difficulty === 'Easy' ? 'Easy' : 'Hard'}
                           </div>
                         </div>
                       </div>
@@ -167,5 +162,3 @@ const ProblemHistoryModal: React.FC<ProblemHistoryModalProps> = ({ isOpen, onClo
 };
 
 export default ProblemHistoryModal;
-
-export default ProblemHistoryModal
