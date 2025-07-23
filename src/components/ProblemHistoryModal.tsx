@@ -114,10 +114,11 @@ const ProblemHistoryModal: React.FC<ProblemHistoryModalProps> = ({ isOpen, onClo
                             })}
                           </div>
                           <div className="text-sm text-gray-600">
-                            {review.wasCorrect ? 'Solved' : 'Failed'} • 
-                          {review.wasCorrect ? 
+                            {review.wasCorrect ? 'Solved' : 'Failed'} • {
+                          review.wasCorrect ? 
                             (review.difficulty === 'Easy' ? 'Solved Easily' : 'Solved with Difficulty') : 
                             'Couldn\'t Solve'
+                          }
                           </div>
                         </div>
                       </div>
