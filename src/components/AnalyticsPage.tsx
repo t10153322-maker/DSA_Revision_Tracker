@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Problem } from '../types';
-import { TrendingUp, Calendar, Target, Award, Clock, Brain } from 'lucide-react';
+import { TrendingUp, Calendar, Target, Award, Clock, Brain, AlertTriangle, BookOpen } from 'lucide-react';
+import { SpacedRepetitionSystem } from '../utils/spacedRepetition';
 
 interface AnalyticsPageProps {
   problems: Problem[];
@@ -53,6 +54,12 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ problems }) => {
       ? Math.round(solvedProblems.reduce((sum, p) => sum + p.attempts, 0) / solvedProblems.length)
       : 0;
 
+    // Get weak topics
+    const weakTopics = SpacedRepetitionSystem.getWeakTopics(problems);
+
+    // Get upcoming reviews
+    const upcomingReviews = SpacedRepetitionSystem.getUpcomingReviews(problems, 7);
+
     return {
       totalProblems,
       conqueredProblems,
@@ -61,7 +68,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ problems }) => {
       difficultyStats,
       recentActivity,
       avgAttempts,
-      masteryRate: totalProblems > 0 ? Math.round((conqueredProblems / totalProblems) * 100) : 0
+      masteryRate: totalProblems > 0 ? Math.round((conqueredProblems / totalProblems) * 100) : 0,
+      weakTopics,
+      upcomingReviews
     };
   }, [problems]);
 
@@ -130,6 +139,27 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ problems }) => {
         </div>
       </div>
 
+      {/* Weak Topics Alert */}
+      {analytics.weakTopics.length > 0 && (
+        <div className="mb-8 bg-orange-50 border border-orange-200 rounded-lg p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <AlertTriangle className="h-6 w-6 text-orange-600" />
+            <h2 className="text-xl font-semibold text-orange-900">Topics Needing Attention</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {analytics.weakTopics.map((topic) => (
+              <div key={topic.topic} className="bg-white rounded-lg p-4 border border-orange-200">
+                <h3 className="font-semibold text-gray-900 mb-2">{topic.topic}</h3>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div>Failure Rate: <span className="font-semibold text-orange-600">{topic.failureRate.toFixed(1)}%</span></div>
+                  <div>Problems: <span className="font-semibold">{topic.problemCount}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Topic Distribution */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -193,6 +223,32 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ problems }) => {
         </div>
       </div>
 
+      {/* Upcoming Reviews */}
+      {analytics.upcomingReviews.length > 0 && (
+        <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <Calendar className="h-6 w-6 text-blue-600" />
+            <h2 className="text-xl font-semibold text-gray-900">Upcoming Reviews (Next 7 Days)</h2>
+          </div>
+          <div className="space-y-3">
+            {analytics.upcomingReviews.slice(0, 10).map((problem) => (
+              <div key={problem.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <BookOpen className="h-4 w-4 text-gray-500" />
+                  <div>
+                    <div className="font-medium text-gray-900">{problem.title}</div>
+                    <div className="text-sm text-gray-600">{problem.topic} • {problem.difficulty}</div>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-600">
+                  {problem.nextReviewDate ? new Date(problem.nextReviewDate).toLocaleDateString() : 'TBD'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Performance Insights */}
       <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Performance Insights</h2>
@@ -201,8 +257,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ problems }) => {
             <h3 className="font-semibold text-blue-900 mb-2">Average Attempts to Solve</h3>
             <div className="text-2xl font-bold text-blue-600">{analytics.avgAttempts}</div>
             <p className="text-sm text-blue-800">
-              {analytics.avgAttempts <= 3 ? 'Excellent problem-solving efficiency!' :
-               analytics.avgAttempts <= 5 ? 'Good progress, keep practicing!' :
+              {analytics.avgAttempts <= 2 ? 'Outstanding problem-solving efficiency!' :
+               analytics.avgAttempts <= 4 ? 'Excellent progress, keep it up!' :
+               analytics.avgAttempts <= 6 ? 'Good progress, keep practicing!' :
                'Focus on understanding patterns to improve efficiency.'}
             </p>
           </div>
@@ -211,8 +268,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ problems }) => {
             <h3 className="font-semibold text-green-900 mb-2">Weekly Activity</h3>
             <div className="text-2xl font-bold text-green-600">{analytics.recentActivity}</div>
             <p className="text-sm text-green-800">
-              {analytics.recentActivity >= 5 ? 'Great consistency this week!' :
-               analytics.recentActivity >= 2 ? 'Good practice frequency!' :
+              {analytics.recentActivity >= 7 ? 'Outstanding daily consistency!' :
+               analytics.recentActivity >= 5 ? 'Great consistency this week!' :
+               analytics.recentActivity >= 3 ? 'Good practice frequency!' :
                'Try to practice more regularly for better retention.'}
             </p>
           </div>
