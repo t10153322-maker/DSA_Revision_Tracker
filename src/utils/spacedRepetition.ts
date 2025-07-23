@@ -27,19 +27,18 @@ export class SpacedRepetitionSystem {
   private static readonly CONQUEST_REVIEW_RATE = 0.05; // 5% weekly
 
   static initializeProblem(problem: Omit<Problem, 'easeFactor' | 'interval' | 'consecutiveCorrect' | 'consecutiveEasy' | 'isConquered' | 'reviewHistory' | 'nextReviewDate'>): Problem {
-    const today = new Date();
-    const nextReviewDate = new Date(today);
-    nextReviewDate.setDate(today.getDate() + this.INITIAL_INTERVALS[problem.difficulty]);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
     return {
       ...problem,
       easeFactor: this.DEFAULT_EASE_FACTOR,
-      interval: this.INITIAL_INTERVALS[problem.difficulty],
+      interval: 1,
       consecutiveCorrect: 0,
       consecutiveEasy: 0,
       isConquered: false,
       reviewHistory: [],
-      nextReviewDate: nextReviewDate.toISOString().split('T')[0]
+      nextReviewDate: tomorrow.toISOString().split('T')[0]
     };
   }
 

@@ -30,9 +30,6 @@ const ProblemModal: React.FC<ProblemModalProps> = ({ isOpen, onClose, onSave, pr
     difficulty: 'Medium' as Problem['difficulty'],
     topic: '',
     url: '',
-    status: 'Not Started' as Problem['status'],
-    attempts: 0,
-    lastPracticed: '',
     notes: ''
   });
 
@@ -44,9 +41,6 @@ const ProblemModal: React.FC<ProblemModalProps> = ({ isOpen, onClose, onSave, pr
         difficulty: problem.difficulty,
         topic: problem.topic,
         url: problem.url || '',
-        status: problem.status,
-        attempts: problem.attempts,
-        lastPracticed: problem.lastPracticed || '',
         notes: problem.notes || ''
       });
     } else {
@@ -56,9 +50,6 @@ const ProblemModal: React.FC<ProblemModalProps> = ({ isOpen, onClose, onSave, pr
         difficulty: 'Medium',
         topic: '',
         url: '',
-        status: 'Not Started',
-        attempts: 0,
-        lastPracticed: '',
         notes: ''
       });
     }
@@ -179,49 +170,6 @@ const ProblemModal: React.FC<ProblemModalProps> = ({ isOpen, onClose, onSave, pr
               value={formData.url}
               onChange={(e) => setFormData({ ...formData, url: e.target.value })}
               placeholder="https://..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as Problem['status'] })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="Not Started">Not Started</option>
-                <option value="Practicing">Practicing</option>
-                <option value="Solved">Solved</option>
-                <option value="Mastered">Mastered</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Attempts
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={formData.attempts}
-                onChange={(e) => setFormData({ ...formData, attempts: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Last Practiced
-            </label>
-            <input
-              type="date"
-              value={formData.lastPracticed}
-              onChange={(e) => setFormData({ ...formData, lastPracticed: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>

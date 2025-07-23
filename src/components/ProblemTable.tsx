@@ -16,21 +16,6 @@ const ProblemTable: React.FC<ProblemTableProps> = ({ problems, onEdit, onDelete,
     problem: null
   });
 
-  const getStatusColor = (status: Problem['status']) => {
-    switch (status) {
-      case 'Not Started':
-        return 'bg-gray-100 text-gray-800';
-      case 'Practicing':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Solved':
-        return 'bg-green-100 text-green-800';
-      case 'Mastered':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const getDifficultyColor = (difficulty: Problem['difficulty']) => {
     switch (difficulty) {
       case 'Easy':
@@ -44,29 +29,24 @@ const ProblemTable: React.FC<ProblemTableProps> = ({ problems, onEdit, onDelete,
     }
   };
 
-  const handleStatusChange = (id: string, newStatus: Problem['status']) => {
-    const now = new Date().toISOString().split('T')[0];
-    onQuickUpdate(id, { 
-      status: newStatus,
-      lastPracticed: now,
-      updatedAt: new Date().toISOString()
-    });
-  };
-
   const handleShowHistory = (problem: Problem) => {
     setHistoryModal({ isOpen: true, problem });
   };
 
-  const handlePracticeSession = (id: string) => {
-    const problem = problems.find(p => p.id === id);
-    if (problem) {
-      const now = new Date().toISOString().split('T')[0];
-      onQuickUpdate(id, {
-        attempts: problem.attempts + 1,
-        lastPracticed: now,
-        updatedAt: new Date().toISOString()
-      });
+  const getStatusDisplay = (problem: Problem) => {
+    if (problem.isConquered) {
+      return { text: 'Conquered', color: 'bg-yellow-100 text-yellow-800' };
     }
+    if (problem.attempts === 0) {
+      return { text: 'Not Started', color: 'bg-gray-100 text-gray-800' };
+    }
+    if (problem.consecutiveCorrect >= 3) {
+      return { text: 'Mastered', color: 'bg-blue-100 text-blue-800' };
+    }
+    if (problem.consecutiveCorrect >= 1) {
+      return { text: 'Solved', color: 'bg-green-100 text-green-800' };
+    }
+    return { text: 'Practicing', color: 'bg-yellow-100 text-yellow-800' };
   };
 
   if (problems.length === 0) {
@@ -146,27 +126,12 @@ const ProblemTable: React.FC<ProblemTableProps> = ({ problems, onEdit, onDelete,
                   {problem.topic}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <select
-                    value={problem.status}
-                    onChange={(e) => handleStatusChange(problem.id, e.target.value as Problem['status'])}
-                    className={`px-2 py-1 text-xs font-medium rounded-full border-none cursor-pointer ${getStatusColor(problem.status)}`}
-                  >
-                    <option value="Not Started">Not Started</option>
-                    <option value="Practicing">Practicing</option>
-                    <option value="Solved">Solved</option>
-                    <option value="Mastered">Mastered</option>
-                  </select>
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusDisplay(problem).color}`}>
+                    {getStatusDisplay(problem).text}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-900">{problem.attempts}</span>
-                    <button
-                      onClick={() => handlePracticeSession(problem.id)}
-                      className="text-blue-600 hover:text-blue-800 text-xs underline"
-                    >
-                      +1
-                    </button>
-                  </div>
+                  <span className="text-sm text-gray-900">{problem.attempts}</span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {problem.lastPracticed ? new Date(problem.lastPracticed).toLocaleDateString() : '-'}

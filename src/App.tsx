@@ -74,6 +74,8 @@ function App() {
         id: Date.now().toString(),
         createdAt: now,
         updatedAt: now
+        status: 'Not Started',
+        attempts: 0
       });
       setProblems(prev => [...prev, newProblem]);
     }
