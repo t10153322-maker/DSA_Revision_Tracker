@@ -12,7 +12,6 @@ import RevisionPage from './components/RevisionPage';
 import ConqueredPage from './components/ConqueredPage';
 import AnalyticsPage from './components/AnalyticsPage';
 import { Plus, Download } from 'lucide-react';
-import * as XLSX from 'xlsx';
 
 function App() {
   const [problems, setProblems] = useLocalStorage<Problem[]>('dsa-problems', []);
@@ -111,65 +110,14 @@ function App() {
   };
 
   const exportData = () => {
-    // Prepare data for Excel export
-    const exportData = problems.map(problem => {
-      const getStatusText = (p: Problem) => {
-        if (p.isConquered) return 'Conquered';
-        if (p.attempts === 0) return 'Not Started';
-        if (p.consecutiveCorrect >= 3) return 'Mastered';
-        if (p.consecutiveCorrect >= 1) return 'Solved';
-        return 'Practicing';
-      };
-
-      return {
-        'Title': problem.title,
-        'Platform': problem.platform,
-        'Difficulty': problem.difficulty,
-        'Topic': problem.topic,
-        'URL': problem.url || '',
-        'Status': getStatusText(problem),
-        'Total Attempts': problem.attempts,
-        'Consecutive Correct': problem.consecutiveCorrect,
-        'Consecutive Easy': problem.consecutiveEasy,
-        'Easy Factor': problem.easeFactor.toFixed(2),
-        'Interval (days)': problem.interval,
-        'Next Review Date': problem.nextReviewDate || '',
-        'Last Practiced': problem.lastPracticed || '',
-        'Is Conquered': problem.isConquered ? 'Yes' : 'No',
-        'Notes': problem.notes || '',
-        'Created At': new Date(problem.createdAt).toLocaleString(),
-        'Updated At': new Date(problem.updatedAt).toLocaleString(),
-        'Review History Count': problem.reviewHistory.length,
-        'Success Rate': problem.reviewHistory.length > 0 ? 
-          `${Math.round((problem.reviewHistory.filter(r => r.wasCorrect).length / problem.reviewHistory.length) * 100)}%` : '0%'
-      };
-    });
-
-    // Create history sheet
-    const historyData = problems.flatMap(problem => 
-      problem.reviewHistory.map(review => ({
-        'Problem Title': problem.title,
-        'Review Date': new Date(review.date).toLocaleString(),
-        'Was Correct': review.wasCorrect ? 'Yes' : 'No',
-        'Difficulty': review.difficulty,
-        'Notes': review.notes || '',
-        'Time Spent (min)': review.timeSpent || ''
-      }))
-    );
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-    
-    // Add problems sheet
-    const ws1 = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(wb, ws1, 'Problems');
-    
-    // Add history sheet
-    const ws2 = XLSX.utils.json_to_sheet(historyData);
-    XLSX.utils.book_append_sheet(wb, ws2, 'Review History');
-    
-    // Save file
-    XLSX.writeFile(wb, `DSA_Problems_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const dataStr = JSON.stringify(problems, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'dsa-problems.json';
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (

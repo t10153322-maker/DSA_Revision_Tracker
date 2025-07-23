@@ -182,7 +182,7 @@ const ProblemModal: React.FC<ProblemModalProps> = ({ isOpen, onClose, onSave, pr
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={3}
-              placeholder="Add your approach, solution strategy, or key insights for future reference..."
+              placeholder="Add your notes, hints, or key insights..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
