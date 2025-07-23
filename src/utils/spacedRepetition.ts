@@ -13,15 +13,18 @@ export class SpacedRepetitionSystem {
   private static readonly MAX_EASE_FACTOR = 2.5;
   private static readonly DEFAULT_EASE_FACTOR = 2.5;
 
-  // Consecutive easy solves needed to mark as conquered
-  private static readonly CONQUERED_THRESHOLD = 5;
+  // Consecutive easy solves needed to mark as conquered (8-10 range)
+  private static readonly CONQUERED_THRESHOLD = 8;
 
   // Multipliers for different performance levels
   private static readonly PERFORMANCE_MULTIPLIERS = {
-    EASY_SOLVE: 1.3,
-    HARD_SOLVE: 0.8,
+    EASY_SOLVE: 1.4,
+    HARD_SOLVE: 0.7,
     FAILED_SOLVE: 0.5
   };
+
+  // Conquest maintenance - percentage of conquered problems to randomly review
+  private static readonly CONQUEST_REVIEW_RATE = 0.05; // 5% weekly
 
   static initializeProblem(problem: Omit<Problem, 'easeFactor' | 'interval' | 'consecutiveCorrect' | 'consecutiveEasy' | 'isConquered' | 'reviewHistory' | 'nextReviewDate'>): Problem {
     const today = new Date();
@@ -40,7 +43,7 @@ export class SpacedRepetitionSystem {
     };
   }
 
-  static updateAfterReview(problem: Problem, wasCorrect: boolean, solveDifficulty: 'Easy' | 'Hard'): Problem {
+  static updateAfterReview(problem: Problem, wasCorrect: boolean, solveDifficulty: 'Easy' | 'Hard', notes?: string): Problem {
     const today = new Date().toISOString().split('T')[0];
     
     // Add to review history
@@ -48,7 +51,8 @@ export class SpacedRepetitionSystem {
       problemId: problem.id,
       date: today,
       wasCorrect,
-      difficulty: solveDifficulty
+      difficulty: solveDifficulty,
+      notes
     };
 
     let newEaseFactor = problem.easeFactor;
@@ -61,8 +65,9 @@ export class SpacedRepetitionSystem {
       
       if (solveDifficulty === 'Easy') {
         newConsecutiveEasy += 1;
-        // Increase ease factor for easy solves
-        newEaseFactor = Math.min(this.MAX_EASE_FACTOR, newEaseFactor + 0.15);
+        // Increase ease factor for easy solves, more aggressive for early solves
+        const easeIncrease = newConsecutiveEasy <= 3 ? 0.1 : 0.15;
+        newEaseFactor = Math.min(this.MAX_EASE_FACTOR, newEaseFactor + easeIncrease);
       } else {
         // Reset consecutive easy count if solved with difficulty
         newConsecutiveEasy = 0;
@@ -72,12 +77,14 @@ export class SpacedRepetitionSystem {
 
       // Calculate new interval based on ease factor
       if (newConsecutiveCorrect === 1) {
-        newInterval = solveDifficulty === 'Easy' ? 2 : 1; // Easy: day after tomorrow, Hard: tomorrow
+        newInterval = solveDifficulty === 'Easy' ? 1 : 1; // Both tomorrow for first solve
       } else if (newConsecutiveCorrect === 2) {
-        newInterval = solveDifficulty === 'Easy' ? 4 : 3; // Easy: 4 days, Hard: 3 days
+        newInterval = solveDifficulty === 'Easy' ? 3 : 2; // Easy: 3 days, Hard: 2 days
       } else {
         const multiplier = solveDifficulty === 'Easy' ? this.PERFORMANCE_MULTIPLIERS.EASY_SOLVE : this.PERFORMANCE_MULTIPLIERS.HARD_SOLVE;
-        newInterval = Math.round(newInterval * newEaseFactor * multiplier);
+        // Progressive spacing - smaller gaps initially, larger gaps later
+        const progressiveMultiplier = newConsecutiveEasy <= 4 ? 0.8 : 1.2;
+        newInterval = Math.round(newInterval * newEaseFactor * multiplier * progressiveMultiplier);
       }
     } else {
       // Reset on incorrect answer
@@ -93,8 +100,8 @@ export class SpacedRepetitionSystem {
     // Calculate next review date
     const nextReviewDate = new Date();
     if (isConquered) {
-      // If conquered, schedule for much later review (45 days)
-      nextReviewDate.setDate(nextReviewDate.getDate() + 45);
+      // If conquered, schedule for much later review (60 days)
+      nextReviewDate.setDate(nextReviewDate.getDate() + 60);
     } else {
       nextReviewDate.setDate(nextReviewDate.getDate() + newInterval);
     }
@@ -117,7 +124,7 @@ export class SpacedRepetitionSystem {
   static getProblemsForToday(problems: Problem[]): Problem[] {
     const today = new Date().toISOString().split('T')[0];
     
-    const dueProblems = problems.filter(problem => {
+    let dueProblems = problems.filter(problem => {
       // Skip conquered problems unless it's been a very long time
       if (problem.isConquered) {
         return false;
@@ -127,6 +134,16 @@ export class SpacedRepetitionSystem {
       return problem.nextReviewDate && problem.nextReviewDate <= today;
     });
 
+    // Add random conquered problems for maintenance (5% chance per conquered problem)
+    const conqueredProblems = problems.filter(p => p.isConquered);
+    const randomConqueredCount = Math.floor(conqueredProblems.length * this.CONQUEST_REVIEW_RATE);
+    
+    if (randomConqueredCount > 0) {
+      const shuffled = [...conqueredProblems].sort(() => 0.5 - Math.random());
+      const selectedConquered = shuffled.slice(0, randomConqueredCount);
+      dueProblems = [...dueProblems, ...selectedConquered];
+    }
+
     // Sort by priority: overdue problems first, then by difficulty (harder first for better learning)
     return dueProblems.sort((a, b) => {
       const aOverdue = a.nextReviewDate && a.nextReviewDate < today;
@@ -134,6 +151,16 @@ export class SpacedRepetitionSystem {
       
       if (aOverdue && !bOverdue) return -1;
       if (!aOverdue && bOverdue) return 1;
+      
+      // Prioritize pending/overdue problems
+      const aDaysSinceScheduled = a.nextReviewDate ? 
+        Math.floor((new Date(today).getTime() - new Date(a.nextReviewDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+      const bDaysSinceScheduled = b.nextReviewDate ? 
+        Math.floor((new Date(today).getTime() - new Date(b.nextReviewDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+      
+      if (aDaysSinceScheduled !== bDaysSinceScheduled) {
+        return bDaysSinceScheduled - aDaysSinceScheduled;
+      }
       
       // If both overdue or both due today, prioritize by consecutive failures
       const aFailures = a.reviewHistory.filter(r => !r.wasCorrect).length;
@@ -145,6 +172,25 @@ export class SpacedRepetitionSystem {
       const difficultyOrder = { 'Hard': 3, 'Medium': 2, 'Easy': 1 };
       return difficultyOrder[b.difficulty] - difficultyOrder[a.difficulty];
     });
+  }
+
+  static getPendingInfo(problem: Problem): { isPending: boolean; daysPending: number; scheduledDate: string } {
+    const today = new Date().toISOString().split('T')[0];
+    const scheduledDate = problem.nextReviewDate || '';
+    
+    if (!scheduledDate || scheduledDate > today) {
+      return { isPending: false, daysPending: 0, scheduledDate };
+    }
+    
+    const daysPending = Math.floor(
+      (new Date(today).getTime() - new Date(scheduledDate).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    
+    return { 
+      isPending: daysPending > 0, 
+      daysPending, 
+      scheduledDate 
+    };
   }
 
   static getConqueredProblems(problems: Problem[]): Problem[] {

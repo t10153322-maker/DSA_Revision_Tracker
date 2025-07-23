@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Problem, ReviewSession } from '../types';
 import { SpacedRepetitionSystem } from '../utils/spacedRepetition';
-import { Clock, CheckCircle, XCircle, ExternalLink, Brain, Target, Trophy, RotateCcw } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, ExternalLink, Brain, Target, Trophy, RotateCcw, Lightbulb, History, AlertTriangle } from 'lucide-react';
+import Toast from './Toast';
+import HintModal from './HintModal';
+import ReviewNotesModal from './ReviewNotesModal';
 
 interface RevisionPageProps {
   problems: Problem[];
@@ -12,6 +15,15 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
   const [todayProblems, setTodayProblems] = useState<Problem[]>([]);
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   const [showResult, setShowResult] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+    isVisible: boolean;
+  }>({ message: '', type: 'info', isVisible: false });
+  const [showHintModal, setShowHintModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [pendingReviewNotes, setPendingReviewNotes] = useState<{ wasCorrect: boolean; difficulty: 'Easy' | 'Hard' } | null>(null);
+  
   const [sessionStats, setSessionStats] = useState({
     completed: 0,
     correct: 0,
@@ -27,13 +39,25 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
 
   const currentProblem = todayProblems[currentProblemIndex];
 
-  const handleReview = (wasCorrect: boolean, difficulty: 'Easy' | 'Hard') => {
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setToast({ message, type, isVisible: true });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, isVisible: false }));
+  };
+
+  const handleReview = (wasCorrect: boolean, difficulty: 'Easy' | 'Hard', notes?: string) => {
+    if (!currentProblem) return;
+
+    // Show success/failure toast
     if (!currentProblem) return;
 
     const updatedProblem = SpacedRepetitionSystem.updateAfterReview(
       currentProblem,
       wasCorrect,
-      difficulty
+      difficulty,
+      notes
     );
 
     onUpdateProblem(currentProblem.id, updatedProblem);
@@ -43,6 +67,19 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
       completed: prev.completed + 1,
       correct: prev.correct + (wasCorrect ? 1 : 0)
     }));
+
+    // Show appropriate toast
+    if (wasCorrect) {
+      if (updatedProblem.isConquered && !currentProblem.isConquered) {
+        showToast('🎉 Problem conquered! It will appear less frequently now.', 'success');
+      } else if (difficulty === 'Easy') {
+        showToast(`✅ Great! Next review in ${updatedProblem.interval} days.`, 'success');
+      } else {
+        showToast(`✅ Good job! Next review in ${updatedProblem.interval} days.`, 'success');
+      }
+    } else {
+      showToast('❌ No worries! You\'ll see this again tomorrow.', 'info');
+    }
 
     setShowResult(true);
 
@@ -59,9 +96,19 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
   };
 
   const skipToNext = () => {
+    // Check if this is the last problem
+    if (todayProblems.length === 1) {
+      showToast('Cannot skip the only remaining problem. Please attempt it or come back later.', 'error');
+      return;
+    }
+
     if (currentProblemIndex < todayProblems.length - 1) {
       setCurrentProblemIndex(prev => prev + 1);
       setShowResult(false);
+      showToast('Problem skipped. It will appear in tomorrow\'s revision.', 'warning');
+    } else {
+      // This shouldn't happen due to the check above, but just in case
+      showToast('No more problems to skip to.', 'warning');
     }
   };
 
@@ -73,6 +120,26 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
       correct: 0,
       startTime: Date.now()
     });
+  };
+
+  const handleReviewWithNotes = (wasCorrect: boolean, difficulty: 'Easy' | 'Hard') => {
+    setPendingReviewNotes({ wasCorrect, difficulty });
+    setShowNotesModal(true);
+  };
+
+  const handleSaveReviewNotes = (notes: string) => {
+    if (pendingReviewNotes) {
+      handleReview(pendingReviewNotes.wasCorrect, pendingReviewNotes.difficulty, notes);
+      setPendingReviewNotes(null);
+    }
+  };
+
+  const getPendingInfo = (problem: Problem) => {
+    return SpacedRepetitionSystem.getPendingInfo(problem);
+  };
+
+  const getRecentAttempts = (problem: Problem) => {
+    return problem.reviewHistory.slice(-5).reverse(); // Last 5 attempts, most recent first
   };
 
   if (todayProblems.length === 0) {
@@ -163,6 +230,7 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
+      <Toast {...toast} onClose={hideToast} />
       {/* Progress Header */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -190,6 +258,22 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
         {!showResult ? (
           <>
+            {/* Pending Alert */}
+            {(() => {
+              const pendingInfo = getPendingInfo(currentProblem);
+              return pendingInfo.isPending && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-center space-x-2">
+                    <AlertTriangle className="h-5 w-5 text-orange-600" />
+                    <span className="font-semibold text-orange-800">
+                      Pending since {pendingInfo.daysPending} day{pendingInfo.daysPending > 1 ? 's' : ''} 
+                      (scheduled: {new Date(pendingInfo.scheduledDate).toLocaleDateString()})
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
                 <div className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -226,6 +310,35 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                 <h3 className="font-semibold text-yellow-800 mb-2">Your Notes:</h3>
                 <p className="text-yellow-700">{currentProblem.notes}</p>
+              </div>
+            )}
+
+            {/* Recent Attempts History */}
+            {getRecentAttempts(currentProblem).length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h3 className="font-semibold text-blue-900 mb-3 flex items-center space-x-2">
+                  <History className="h-4 w-4" />
+                  <span>Recent Attempts</span>
+                </h3>
+                <div className="space-y-2">
+                  {getRecentAttempts(currentProblem).map((attempt, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2">
+                        {attempt.wasCorrect ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        )}
+                        <span className="text-blue-800">
+                          {new Date(attempt.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <span className={`font-medium ${attempt.wasCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                        {attempt.wasCorrect ? (attempt.difficulty === 'Easy' ? 'Easy' : 'Hard') : 'Failed'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -267,14 +380,25 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
                 <div className="w-full bg-blue-200 rounded-full h-2">
                   <div 
                     className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${(currentProblem.consecutiveEasy / 5) * 100}%` }}
+                    style={{ width: `${(currentProblem.consecutiveEasy / 8) * 100}%` }}
                   />
                 </div>
                 <p className="text-xs text-blue-800 mt-2">
-                  {5 - currentProblem.consecutiveEasy} more easy solve{5 - currentProblem.consecutiveEasy !== 1 ? 's' : ''} to conquer this problem!
+                  {8 - currentProblem.consecutiveEasy} more easy solve{8 - currentProblem.consecutiveEasy !== 1 ? 's' : ''} to conquer this problem!
                 </p>
               </div>
             )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-center mb-6">
+              <button
+                onClick={() => setShowHintModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
+              >
+                <Lightbulb className="h-4 w-4" />
+                <span>Show Hint</span>
+              </button>
+            </div>
 
             <div className="text-center">
               <p className="text-gray-600 mb-6">
@@ -284,7 +408,7 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button
-                    onClick={() => handleReview(true, 'Easy')}
+                    onClick={() => handleReviewWithNotes(true, 'Easy')}
                     className="flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md"
                   >
                     <CheckCircle className="h-5 w-5" />
@@ -292,7 +416,7 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
                   </button>
                   
                   <button
-                    onClick={() => handleReview(true, 'Hard')}
+                    onClick={() => handleReviewWithNotes(true, 'Hard')}
                     className="flex items-center justify-center space-x-2 px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors shadow-md"
                   >
                     <Brain className="h-5 w-5" />
@@ -301,7 +425,7 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
                 </div>
                 
                 <button
-                  onClick={() => handleReview(false, 'Hard')}
+                  onClick={() => handleReviewWithNotes(false, 'Hard')}
                   className="flex items-center justify-center space-x-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-md"
                 >
                   <XCircle className="h-5 w-5" />
@@ -333,6 +457,18 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      <HintModal
+        isOpen={showHintModal}
+        onClose={() => setShowHintModal(false)}
+        problem={currentProblem}
+      />
+      <ReviewNotesModal
+        isOpen={showNotesModal}
+        onClose={() => setShowNotesModal(false)}
+        onSave={handleSaveReviewNotes}
+      />
     </div>
   );
 };

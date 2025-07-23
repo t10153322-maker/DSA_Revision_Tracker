@@ -1,6 +1,7 @@
 import React from 'react';
 import { Problem } from '../types';
-import { ExternalLink, Edit2, Trash2, Clock } from 'lucide-react';
+import { ExternalLink, Edit2, Trash2, Clock, History } from 'lucide-react';
+import ProblemHistoryModal from './ProblemHistoryModal';
 
 interface ProblemTableProps {
   problems: Problem[];
@@ -10,6 +11,11 @@ interface ProblemTableProps {
 }
 
 const ProblemTable: React.FC<ProblemTableProps> = ({ problems, onEdit, onDelete, onQuickUpdate }) => {
+  const [historyModal, setHistoryModal] = React.useState<{ isOpen: boolean; problem: Problem | null }>({
+    isOpen: false,
+    problem: null
+  });
+
   const getStatusColor = (status: Problem['status']) => {
     switch (status) {
       case 'Not Started':
@@ -45,6 +51,10 @@ const ProblemTable: React.FC<ProblemTableProps> = ({ problems, onEdit, onDelete,
       lastPracticed: now,
       updatedAt: new Date().toISOString()
     });
+  };
+
+  const handleShowHistory = (problem: Problem) => {
+    setHistoryModal({ isOpen: true, problem });
   };
 
   const handlePracticeSession = (id: string) => {
@@ -164,6 +174,13 @@ const ProblemTable: React.FC<ProblemTableProps> = ({ problems, onEdit, onDelete,
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center space-x-2">
                     <button
+                      onClick={() => handleShowHistory(problem)}
+                      className="text-purple-600 hover:text-purple-800 p-1 hover:bg-purple-50 rounded transition-colors"
+                      title="View History"
+                    >
+                      <History className="h-4 w-4" />
+                    </button>
+                    <button
                       onClick={() => onEdit(problem)}
                       className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded transition-colors"
                     >
@@ -182,6 +199,12 @@ const ProblemTable: React.FC<ProblemTableProps> = ({ problems, onEdit, onDelete,
           </tbody>
         </table>
       </div>
+      
+      <ProblemHistoryModal
+        isOpen={historyModal.isOpen}
+        onClose={() => setHistoryModal({ isOpen: false, problem: null })}
+        problem={historyModal.problem!}
+      />
     </div>
   );
 };

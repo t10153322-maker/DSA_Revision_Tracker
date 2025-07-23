@@ -2,6 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Problem } from '../types';
 import { X } from 'lucide-react';
 
+// Common dropdown options
+const PLATFORMS = [
+  'LeetCode', 'CodeForces', 'HackerRank', 'GeeksforGeeks', 'InterviewBit', 
+  'CodeChef', 'AtCoder', 'TopCoder', 'SPOJ', 'HackerEarth', 'Other'
+];
+
+const TOPICS = [
+  'Array', 'String', 'Linked List', 'Stack', 'Queue', 'Tree', 'Binary Tree',
+  'Binary Search Tree', 'Heap', 'Hash Table', 'Graph', 'Dynamic Programming',
+  'Greedy', 'Backtracking', 'Divide and Conquer', 'Two Pointers', 'Sliding Window',
+  'Binary Search', 'Sorting', 'Bit Manipulation', 'Math', 'Recursion', 'Trie',
+  'Union Find', 'Segment Tree', 'Fenwick Tree', 'Other'
+];
+
 interface ProblemModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -92,14 +106,25 @@ const ProblemModal: React.FC<ProblemModalProps> = ({ isOpen, onClose, onSave, pr
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Platform *
               </label>
-              <input
-                type="text"
+              <select
                 required
                 value={formData.platform}
                 onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-                placeholder="e.g., LeetCode, CodeForces"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              >
+                <option value="">Select Platform</option>
+                {PLATFORMS.map(platform => (
+                  <option key={platform} value={platform}>{platform}</option>
+                ))}
+              </select>
+              {formData.platform === 'Other' && (
+                <input
+                  type="text"
+                  placeholder="Enter custom platform"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mt-2"
+                  onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
+                />
+              )}
             </div>
           </div>
           
@@ -123,14 +148,25 @@ const ProblemModal: React.FC<ProblemModalProps> = ({ isOpen, onClose, onSave, pr
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Topic *
               </label>
-              <input
-                type="text"
+              <select
                 required
                 value={formData.topic}
                 onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
-                placeholder="e.g., Array, Tree, Dynamic Programming"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              >
+                <option value="">Select Topic</option>
+                {TOPICS.map(topic => (
+                  <option key={topic} value={topic}>{topic}</option>
+                ))}
+              </select>
+              {formData.topic === 'Other' && (
+                <input
+                type="text"
+                  placeholder="Enter custom topic"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mt-2"
+                  onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                />
+              )}
             </div>
           </div>
           
