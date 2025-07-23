@@ -73,7 +73,7 @@ function App() {
         ...problemData,
         id: Date.now().toString(),
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
         status: 'Not Started',
         attempts: 0
       });
