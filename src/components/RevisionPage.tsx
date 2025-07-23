@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Problem, ReviewSession } from '../types';
 import { SpacedRepetitionSystem } from '../utils/spacedRepetition';
-import { Clock, CheckCircle, XCircle, ExternalLink, Brain, Target } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, ExternalLink, Brain, Target, Trophy, RotateCcw } from 'lucide-react';
 
 interface RevisionPageProps {
   problems: Problem[];
@@ -102,6 +102,11 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
   if (currentProblemIndex >= todayProblems.length) {
     const accuracy = sessionStats.completed > 0 ? Math.round((sessionStats.correct / sessionStats.completed) * 100) : 0;
     const timeSpent = Math.round((Date.now() - sessionStats.startTime) / 60000);
+    const newlyConquered = problems.filter(p => 
+      p.isConquered && 
+      p.reviewHistory.length > 0 && 
+      new Date(p.reviewHistory[p.reviewHistory.length - 1].date).toDateString() === new Date().toDateString()
+    ).length;
 
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
@@ -111,7 +116,7 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Session Complete! 🎉</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="text-2xl font-bold text-blue-600">{sessionStats.completed}</div>
               <div className="text-sm text-blue-800">Problems Reviewed</div>
@@ -124,7 +129,24 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
               <div className="text-2xl font-bold text-purple-600">{timeSpent}m</div>
               <div className="text-sm text-purple-800">Time Spent</div>
             </div>
+            <div className="bg-yellow-50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-yellow-600">{newlyConquered}</div>
+              <div className="text-sm text-yellow-800">Newly Conquered</div>
+            </div>
           </div>
+
+          {newlyConquered > 0 && (
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-6 border border-yellow-200 mb-6">
+              <div className="flex items-center space-x-3 mb-2">
+                <Trophy className="h-6 w-6 text-yellow-600" />
+                <h3 className="text-lg font-semibold text-yellow-800">Congratulations!</h3>
+              </div>
+              <p className="text-yellow-700">
+                You've conquered {newlyConquered} problem{newlyConquered > 1 ? 's' : ''} today! 
+                These will now appear less frequently in your reviews.
+              </p>
+            </div>
+          )}
 
           <button
             onClick={resetSession}
@@ -210,7 +232,7 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
             <div className="bg-gray-50 rounded-lg p-4 mb-8">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-600">Attempts:</span>
+                  <span className="text-gray-600">Total Attempts:</span>
                   <span className="ml-2 font-semibold">{currentProblem.attempts}</span>
                 </div>
                 <div>
@@ -222,7 +244,7 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
                   <span className="ml-2 font-semibold text-blue-600">{currentProblem.consecutiveEasy}</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Last Practiced:</span>
+                  <span className="text-gray-600">Last Review:</span>
                   <span className="ml-2 font-semibold">
                     {currentProblem.lastPracticed ? 
                       new Date(currentProblem.lastPracticed).toLocaleDateString() : 
@@ -233,16 +255,37 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
               </div>
             </div>
 
+            {/* Progress towards conquest */}
+            {currentProblem.consecutiveEasy > 0 && !currentProblem.isConquered && (
+              <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-blue-900">Progress to Conquest</h3>
+                  <span className="text-sm text-blue-700">
+                    {currentProblem.consecutiveEasy}/5 easy solves
+                  </span>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(currentProblem.consecutiveEasy / 5) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-blue-800 mt-2">
+                  {5 - currentProblem.consecutiveEasy} more easy solve{5 - currentProblem.consecutiveEasy !== 1 ? 's' : ''} to conquer this problem!
+                </p>
+              </div>
+            )}
+
             <div className="text-center">
               <p className="text-gray-600 mb-6">
-                Take your time to solve this problem. When you're ready, let us know how it went:
+                Take your time to solve this problem. Rate your performance honestly to optimize your learning:
               </p>
               
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button
                     onClick={() => handleReview(true, 'Easy')}
-                    className="flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    className="flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md"
                   >
                     <CheckCircle className="h-5 w-5" />
                     <span>Solved Easily</span>
@@ -250,7 +293,7 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
                   
                   <button
                     onClick={() => handleReview(true, 'Hard')}
-                    className="flex items-center justify-center space-x-2 px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                    className="flex items-center justify-center space-x-2 px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors shadow-md"
                   >
                     <Brain className="h-5 w-5" />
                     <span>Solved with Difficulty</span>
@@ -259,7 +302,7 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
                 
                 <button
                   onClick={() => handleReview(false, 'Hard')}
-                  className="flex items-center justify-center space-x-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  className="flex items-center justify-center space-x-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-md"
                 >
                   <XCircle className="h-5 w-5" />
                   <span>Couldn't Solve</span>
@@ -267,8 +310,9 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
                 
                 <button
                   onClick={skipToNext}
-                  className="text-gray-600 hover:text-gray-800 text-sm underline"
+                  className="flex items-center justify-center space-x-1 text-gray-600 hover:text-gray-800 text-sm underline"
                 >
+                  <RotateCcw className="h-3 w-3" />
                   Skip for now
                 </button>
               </div>
@@ -277,10 +321,15 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
         ) : (
           <div className="text-center py-8">
             <div className="text-green-400 mb-4">
-              <CheckCircle className="h-16 w-16 mx-auto" />
+              <CheckCircle className="h-16 w-16 mx-auto animate-pulse" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Response Recorded!</h3>
-            <p className="text-gray-600">Moving to next problem...</p>
+            <p className="text-gray-600">
+              {currentProblemIndex < todayProblems.length - 1 
+                ? 'Moving to next problem...' 
+                : 'Completing session...'
+              }
+            </p>
           </div>
         )}
       </div>
