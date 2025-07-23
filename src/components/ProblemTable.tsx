@@ -83,10 +83,10 @@ const ProblemTable: React.FC<ProblemTableProps> = ({ problems, onEdit, onDelete,
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Attempts
+                Streak
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Last Practiced
+                Next Review
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
@@ -131,10 +131,20 @@ const ProblemTable: React.FC<ProblemTableProps> = ({ problems, onEdit, onDelete,
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">{problem.attempts}</span>
+                  <div className="text-sm text-gray-900">
+                    {problem.isConquered ? (
+                      <span className="text-yellow-600 font-semibold">Conquered</span>
+                    ) : problem.consecutiveCorrect > 0 ? (
+                      <span className="text-green-600">✓ {problem.consecutiveCorrect}</span>
+                    ) : problem.attempts > 0 ? (
+                      <span className="text-red-600">✗ {problem.attempts}</span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {problem.lastPracticed ? new Date(problem.lastPracticed).toLocaleDateString() : '-'}
+                  {problem.nextReviewDate ? new Date(problem.nextReviewDate).toLocaleDateString() : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center space-x-2">

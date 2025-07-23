@@ -47,6 +47,21 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
 
   const currentProblem = todayProblems[currentProblemIndex];
 
+  // Check if hint is available
+  const isHintAvailable = () => {
+    if (!currentProblem) return false;
+    
+    // Check if problem has notes
+    if (currentProblem.notes && currentProblem.notes.trim()) {
+      return true;
+    }
+    
+    // Check if there's any successful attempt with notes
+    return currentProblem.reviewHistory.some(review => 
+      review.wasCorrect && review.notes && review.notes.trim()
+    );
+  };
+
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setToast({ message, type, isVisible: true });
   };
@@ -78,9 +93,9 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
       if (updatedProblem.isConquered && !currentProblem.isConquered) {
         showToast('🎉 Problem conquered! It will appear less frequently now.', 'success');
       } else if (difficulty === 'Easy') {
-        showToast(`✅ Solved easily! Progress: ${updatedProblem.consecutiveEasy}/8 easy solves. Next review in ${updatedProblem.interval} days.`, 'success');
+        showToast(`✅ Solved easily! Progress: ${updatedProblem.consecutiveEasy}/8 easy solves. Next review in ${updatedProblem.interval} day${updatedProblem.interval > 1 ? 's' : ''}.`, 'success');
       } else {
-        showToast(`✅ Solved with difficulty! Next review in ${updatedProblem.interval} days.`, 'success');
+        showToast(`✅ Solved with difficulty! Next review in ${updatedProblem.interval} day${updatedProblem.interval > 1 ? 's' : ''}.`, 'success');
       }
     } else {
       showToast('❌ No worries! You\'ll see this again tomorrow.', 'info');
@@ -374,13 +389,15 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
 
             {/* Action Buttons */}
             <div className="flex justify-center space-x-4 mb-6">
-              <button
-                onClick={handleShowHint}
-                className="flex items-center space-x-2 px-4 py-2 text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
-              >
-                <Lightbulb className="h-4 w-4" />
-                <span>Show Hint</span>
-              </button>
+              {isHintAvailable() && (
+                <button
+                  onClick={handleShowHint}
+                  className="flex items-center space-x-2 px-4 py-2 text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  <Lightbulb className="h-4 w-4" />
+                  <span>Show Hint</span>
+                </button>
+              )}
               
               {currentProblem.reviewHistory.length > 0 && (
                 <button
@@ -414,7 +431,7 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
                   {!hasUsedHint && (
                     <button
                       onClick={() => handleReviewWithNotes(true, 'Easy')}
-                      className="flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md"
+                      className="flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md min-w-[180px]"
                     >
                       <CheckCircle className="h-5 w-5" />
                       <span>Solved Easily</span>
@@ -423,7 +440,7 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
                   
                   <button
                     onClick={() => handleReviewWithNotes(true, 'Hard')}
-                    className="flex items-center justify-center space-x-2 px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors shadow-md"
+                    className="flex items-center justify-center space-x-2 px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors shadow-md min-w-[180px]"
                   >
                     <Brain className="h-5 w-5" />
                     <span>Solved with Difficulty</span>
@@ -432,7 +449,7 @@ const RevisionPage: React.FC<RevisionPageProps> = ({ problems, onUpdateProblem }
                 
                 <button
                   onClick={() => handleReviewWithNotes(false, 'Hard')}
-                  className="flex items-center justify-center space-x-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-md"
+                  className="flex items-center justify-center space-x-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-md min-w-[180px]"
                 >
                   <XCircle className="h-5 w-5" />
                   <span>Couldn't Solve</span>
