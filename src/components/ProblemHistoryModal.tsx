@@ -167,3 +167,5 @@ const ProblemHistoryModal: React.FC<ProblemHistoryModalProps> = ({ isOpen, onClo
 };
 
 export default ProblemHistoryModal;
+
+export default ProblemHistoryModal
